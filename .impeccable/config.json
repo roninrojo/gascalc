@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles.css"
+        ],
+        "createdAt": "2026-11-23T13:04:16.788Z",
+        "reason": "Codex: The border separates the cashback amount input from its unit selector inside a shared full border."
+      }
+    ]
+  }
+}
