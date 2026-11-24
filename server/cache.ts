@@ -1,4 +1,4 @@
-import { normalizeDataset, SOURCE } from '../src/domain/normalize';
+import { normalizeDataset, SOURCE } from '../src/domain/normalize.js';
 import type { Dataset } from '../src/types';
 
 export function createStationCache(ttl: number, fetcher: typeof fetch = fetch, clock = () => Date.now()) {

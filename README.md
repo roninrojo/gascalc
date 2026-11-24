@@ -4,7 +4,7 @@ Comparador funcional de gasóleo A en España, con cashback por litro solo en la
 
 ## Instalar y ejecutar
 
-Requisitos: Node.js **22.12 o posterior de la rama 22**, o Node 24 LTS, npm y conexión a Internet.
+Requisitos: Node.js **22.12 o posterior de la rama 22**, npm y conexión a Internet.
 
 ```bash
 npm ci
@@ -14,7 +14,7 @@ npm run dev
 
 Abre **http://127.0.0.1:5173**. Vite reenvía `/api` al backend, por defecto en `127.0.0.1:3001`. No necesitas claves de API, base de datos ni cuentas externas. La primera consulta puede tardar unos segundos.
 
-### Compilación y ejecución de producción
+### Compilación y ejecución con Express
 
 ```bash
 npm run build
@@ -24,6 +24,14 @@ npm start
 Abre **http://127.0.0.1:3001**: Express sirve tanto `dist/` como `/api/stations`. Debes desplegar frontend y backend, no solo `dist/`. Conserva el código de `server/`, los módulos compartidos de `src/` y las dependencias necesarias para `tsx`. El comando `npm start` usa `tsx`, incluido como dependencia de desarrollo: no instales con `--omit=dev` en este esquema de despliegue.
 
 El servidor escucha solo en loopback. Para acceso público usa un proxy inverso con HTTPS, redirigiendo todo al puerto configurado. La geolocalización requiere un contexto seguro: HTTPS en producción; localhost/127.0.0.1 funciona durante desarrollo. No uses el servidor de desarrollo de Vite en Internet.
+
+### Despliegue en Vercel
+
+Importa el repositorio `roninrojo/gascalc` desde [Vercel → New Project](https://vercel.com/new) con la raíz del repositorio como directorio del proyecto. `vercel.json` fija el preset Vite, la instalación con `npm ci`, la compilación con `npm run build` y la salida en `dist/`. `package.json` selecciona Node.js 22.x con mínimo 22.12. En los ajustes de Vercel, selecciona `main` como rama de producción y habilita los despliegues de vista previa para las demás ramas.
+
+Vercel sirve el frontend y `/api/stations` bajo el mismo dominio. La función consulta al Ministerio bajo demanda y tiene un máximo de 35 segundos. La caché de 10 minutos pertenece a cada instancia.
+
+Antes de fusionar, abre la vista previa y comprueba la portada, la fecha de publicación en `/api/stations`, la búsqueda por CP, los filtros y el cálculo de cashback. Mide el cuerpo JSON sin compresión frente al límite de 4,5 MB de Vercel. A partir de 4 MB, usa una respuesta en streaming con el mismo formato JSON. Tras fusionar en `main`, comprueba la URL de producción que asigna Vercel.
 
 ## Uso
 
@@ -98,9 +106,12 @@ src/
   types.ts          # Contratos compartidos
   App.tsx           # Composición, consulta, selección y filtros
   styles.css        # Tailwind 4, tokens y estilos responsive
+api/
+  stations.ts       # Entrada Node.js de Vercel para /api/stations
 server/
+  app.ts            # Aplicación Express y API de solo lectura
   cache.ts          # Caché, deduplicación de consultas concurrentes y fallback marcado
-  index.ts          # API de solo lectura y archivos estáticos
+  index.ts          # Arranque local y archivos estáticos
 tests/
   *.test.ts         # Unitarias de dominio y caché
   e2e/              # Playwright: recorrido real y regresiones aisladas
