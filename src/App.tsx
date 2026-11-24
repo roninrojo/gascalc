@@ -95,9 +95,10 @@ export default function App() {
     <a className="skip-link" href="#main">Saltar al contenido</a>
     <header className="site-header"><div className="container header-inner"><a className="wordmark" href="#" aria-label="Gascalc, inicio"><span className="logo-mark"><svg width="19" height="24" viewBox="0 0 24 30" aria-hidden="true"><path d="M14 1 2 17h10L8 29 23 10H12Z" fill="currentColor"/></svg></span>gascalc<span className="wordmark-dot">.</span></a><a className="header-link" href="#como-funciona">Cómo funciona <Icon name="arrow" size={16}/></a></div></header>
     <main id="main" className="container">
+      <h1 className="mobile-title sr-only">Gascalc, comparador de gasóleo A</h1>
       <section className="hero" aria-labelledby="title">
         <div className="hero-copy">
-          <h1 id="title">Cada céntimo<br/><span>cuenta.</span></h1>
+          <h1 id="title">Cada céntimo <span>cuenta.</span></h1>
           <p className="hero-description">Compara el precio real de repostar. Encuentra tu gasolinera y descubre si el cashback compensa.</p>
         </div>
         <div className="hero-note">
