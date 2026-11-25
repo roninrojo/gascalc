@@ -39,9 +39,11 @@ Antes de fusionar, abre la vista previa y comprueba la portada, la fecha de publ
 2. Selecciona la estación A en «Cerca de ti». Puedes ordenar por precio o proximidad.
 3. Busca un rótulo, selecciónalo en el desplegable y elige la estación B.
 4. Introduce litros y cashback. Cambiar €/L ↔ céntimos/L convierte el importe y conserva su valor económico.
-5. Revisa coste efectivo, ahorro y cashback de equilibrio. El radio de 5/10/20/50 km se aplica a ambos listados.
+5. Si la promoción tiene restricciones, abre «Límites del cashback» e introduce los topes que correspondan.
+6. Para comparar también el viaje, abre «Coste de desplazamiento», activa la opción y revisa los kilómetros adicionales de ida de cada estación. Usa cero si puedes repostar en tu trayecto habitual.
+7. Revisa el coste total, el desglose del ahorro y los puntos de equilibrio. Cada listado tiene su propio radio de 5/10/20/50 km.
 
-Las preferencias de ubicación, marca, litros y cashback se guardan en `localStorage`. Las selecciones de estación son independientes, no persisten al recargar y no alteran los valores del comparador. Cambiar el radio u orden no elimina la selección; cambiar la ubicación sí. Se impide presentar como alternativas dos selecciones de la misma estación.
+Las preferencias de ubicación, marca, litros, cashback, límites y desplazamiento se guardan en `localStorage`. Las distancias editadas se recuperan al volver a elegir la misma estación y ubicación de referencia. Las selecciones de estación son independientes y se vuelven a hacer al recargar. Cambiar el radio u orden conserva la estación seleccionada. Se impide presentar dos selecciones de la misma estación como alternativas.
 
 ## Variables de entorno
 
@@ -83,7 +85,7 @@ Los precios vacíos, no numéricos o no positivos **se excluyen, nunca se sustit
 
 - **Fecha de publicación, no actualización individual:** el endpoint no entrega una fecha de último cambio por estación. Cada tarjeta etiqueta su fecha como «Publicación»; no se inventa una fecha individual. Se muestran última consulta correcta y advertencias de antigüedad o fallo de renovación.
 - **Municipio y CP sin centro geográfico:** para no depender de un geocodificador ni comunicar ubicación a terceros, la búsqueda manual usa la media de coordenadas de estaciones coincidentes. Se indica que es un punto aproximado. No es el centro oficial, ni la posición del usuario, y municipios extensos o CP dispersos pueden introducir diferencias grandes. Solo aparecen ubicaciones presentes en estaciones con datos utilizables. La alternativa para más precisión es geolocalización, ya incluida; una extensión posterior podría añadir geocodificación oficial IGN/CartoCiudad con atribución y revisión de sus condiciones.
-- **Distancia en línea recta:** Haversine sobre WGS84, no kilómetros por carretera. No se calcula gasto de desplazamiento.
+- **Distancia en línea recta:** Haversine sobre WGS84. Cuando se comparte ubicación de referencia, esta distancia sirve como estimación inicial del trayecto. Para usar distancias por carretera, o si los listados tienen orígenes distintos, introduce los kilómetros adicionales de ida.
 - **Marca = rótulo:** el listado disponible procede de los datos, no de una lista inventada. Variantes como franquicias o nombres compuestos se mantienen separadas; la búsqueda ignora acentos y mayúsculas, la selección filtra el rótulo completo.
 - **Promociones no disponibles en la API:** el cashback se introduce manualmente. No se afirman promociones vigentes ni se consultan saldos, límites o condiciones comerciales.
 - **Canarias, Ceuta y Melilla:** pueden incluirse si el conjunto oficial las publica con datos válidos. La fecha se muestra explícitamente en hora peninsular. Las comparaciones no ajustan fiscalidad ni condiciones particulares.
@@ -135,18 +137,23 @@ Funciones puras en `src/domain/compare.ts`:
 ```text
 Coste A              = P1 × L
 Coste original B     = P2 × L
-Cashback total B     = C × L
-Coste efectivo B     = (P2 × L) − (C × L)
-Precio efectivo B    = P2 − C
-Diferencia           = Coste A − Coste efectivo B
-Cashback equilibrio  = P2 − P1
+Litros bonificados   = mínimo(L, límite de litros)
+Cashback efectivo B  = mínimo(C × litros bonificados, límite en euros)
+Coste efectivo B     = Coste original B − Cashback efectivo B
+Precio efectivo B    = Coste efectivo B / L
+Distancia total      = km de ida × (2 con vuelta, 1 solo ida)
+Combustible de viaje  = distancia total × consumo medio / 100
+Coste real           = coste efectivo + combustible de viaje × precio de referencia
+Diferencia           = Coste real A − Coste real B
 ```
 
-`C` se convierte a euros/L antes del cálculo. No se redondean valores intermedios; se usa una tolerancia de escala de `Number.EPSILON` únicamente para empates afectados por coma flotante. Los importes se presentan con dos decimales y los precios con al menos tres (más si es necesario, hasta 12) usando `Intl.NumberFormat('es-ES')`. No es un sistema contable de liquidación de promociones.
+`C` se convierte a euros/L antes del cálculo. Los límites vacíos son ilimitados. Con el desplazamiento desactivado, el coste real coincide con el coste efectivo. Los litros de equilibrio se calculan antes y después del primer límite alcanzado, ya que desde ese punto el cashback deja de crecer. Los cálculos conservan la precisión intermedia y aplican una tolerancia de `Number.EPSILON` para empates afectados por coma flotante.
 
 Se rechazan litros no positivos, números no finitos, cashback negativo, desbordamientos de cálculo y cashback superior al precio B. Si el cashback iguala el precio se permite coste efectivo cero, siempre sujeto a las condiciones reales de la promoción. No se cambian precios ni se recortan costes negativos silenciosamente.
 
 Ejemplo cubierto por las pruebas: A 1,621 €/L; B 1,835 €/L; 50 L; 0,30 €/L cashback → A **81,05 €**, B original **91,75 €**, cashback **15,00 €**, B efectivo **76,75 €**, ahorro **4,30 €**, precio efectivo **1,535 €/L**, equilibrio **0,214 €/L**.
+
+Con 0 km adicionales de ida para A y 10 km para B, ida y vuelta, 6 L/100 km y 1,50 €/L, B consume 1,2 L en el trayecto y suma **1,80 €** de desplazamiento. Su coste real es **78,55 €** y el ahorro neto es **2,50 €**. El equilibrio está en **23,89 km** adicionales de ida respecto a A o **20,93 L** repostados para las distancias del ejemplo.
 
 ## Pruebas
 

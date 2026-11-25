@@ -84,6 +84,131 @@ test('regresión determinista del ejemplo, unidades, misma estación y límites'
   await expect(page.getByRole('alert')).toContainText('misma estación');
 });
 
+test('coste real de referencia, límites editables y preferencias persistentes', async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 375, height: 812 });
+  await page.route('**/api/stations', route => route.fulfill({ json: {
+    stations: [
+      station({ id: 'a', name: 'GALP TEST', brand: 'GALP', price: 1.621 }),
+      station({ id: 'b', name: 'REPSOL TEST', price: 1.835, lat: 40.44, postalCode: '28002' }),
+    ],
+    publishedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), stale: false, skipped: 0, source: 'test',
+  } }));
+  await page.goto('/');
+  await page.getByLabel('Municipio o código postal').fill('28001');
+  await page.getByRole('button', { name: 'Buscar ubicación' }).click();
+  await page.getByRole('button', { name: '28001 · Madrid, MADRID' }).click();
+  const nearby = page.getByRole('list', { name: 'Gasolineras cercanas' });
+  const brand = page.getByRole('list', { name: 'Gasolineras de la marca' });
+  await nearby.getByRole('button', { name: /GALP TEST/ }).click();
+  await chooseSearchOption(page, 'Marca seleccionada', 'REPSOL');
+  await brand.getByRole('button').click();
+
+  const cashback = page.getByLabel('Cashback de la estación de marca');
+  const conclusion = page.locator('.conclusion');
+  await cashback.fill('30');
+  await expect(conclusion).toContainText('4,30');
+  await page.getByText('Coste de desplazamiento', { exact: true }).click();
+  const includeTravel = page.getByRole('checkbox', { name: 'Incluir coste de desplazamiento' });
+  await expect(includeTravel).not.toBeChecked();
+  await includeTravel.check();
+  const consumption = page.getByLabel('Consumo medio del vehículo');
+  const fuelPrice = page.getByLabel('Precio del combustible consumido');
+  const nearDistance = page.getByLabel('Distancia adicional hasta la gasolinera A');
+  const brandDistance = page.getByLabel('Distancia adicional hasta la gasolinera B');
+  const includeReturn = page.getByRole('checkbox', { name: 'Incluir trayecto de vuelta' });
+  await expect(consumption).toHaveValue('6');
+  await expect(fuelPrice).toHaveValue('1.621');
+  await expect(nearDistance).toHaveValue('0');
+  await expect(brandDistance).toHaveValue(/^2\./);
+  await expect(includeReturn).toBeChecked();
+  await fuelPrice.fill('1.50');
+  await nearDistance.fill('0');
+  await brandDistance.fill('10');
+
+  const cardA = page.getByRole('article', { name: 'Coste de la gasolinera cercana' });
+  const cardB = page.getByRole('article', { name: 'Coste de la gasolinera de marca' });
+  await expect(cardA.locator('.total')).toContainText('81,05');
+  await expect(cardB.locator('.total')).toContainText('78,55');
+  await expect(cardB).toContainText('1,2 L');
+  await expect(cardB).toContainText('1,80');
+  await expect(cardB.getByText('Mejor opción')).toBeVisible();
+  await expect(conclusion).toContainText('2,50');
+  const breakEven = page.getByRole('region', { name: '¿Hasta dónde compensa desplazarse?' });
+  await expect(breakEven).toContainText('23,89 km');
+  await expect(breakEven).toContainText('20,93 L');
+  await expect(breakEven).toContainText('0,250 €/L');
+
+  await brandDistance.fill('30');
+  await expect(conclusion).toContainText('tiene un precio efectivo por litro inferior');
+  await brandDistance.fill('-1');
+  await expect(brandDistance).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.locator('.winner')).toHaveCount(0);
+  await brandDistance.fill('10');
+  await page.getByText('Límites del cashback', { exact: true }).click();
+  const cap = page.getByLabel('Importe máximo de cashback');
+  const bonusLiters = page.getByLabel('Litros máximos bonificados');
+  await cap.fill('10');
+  await expect(cardA.getByText('Mejor opción')).toBeVisible();
+  await expect(breakEven).toContainText('La promoción no permite compensar la diferencia.');
+  await cap.fill('');
+  await bonusLiters.fill('40');
+  await expect(breakEven).toContainText('0,3125 €/L');
+  await includeReturn.uncheck();
+  await expect(cardB.locator('.total')).toContainText('80,65');
+  await expect(cardB.getByText('Mejor opción')).toBeVisible();
+  const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(accessibility.violations).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  await page.reload();
+  await expect(includeTravel).toBeChecked();
+  await expect(fuelPrice).toHaveValue(/^1\.50?$/);
+  await expect(bonusLiters).toHaveValue('40');
+  await expect(includeReturn).not.toBeChecked();
+  await nearby.getByRole('button', { name: /GALP TEST/ }).click();
+  await brand.getByRole('button').click();
+  await expect(nearDistance).toHaveValue('0');
+  await expect(brandDistance).toHaveValue('10');
+  await expect(cardB.locator('.total')).toContainText('80,65');
+  await page.getByRole('button', { name: 'Usar el precio de A' }).click();
+  await expect(fuelPrice).toHaveValue('1.621');
+  await includeTravel.uncheck();
+  await expect(cardB.locator('.total')).toContainText('79,75');
+});
+
+test('orígenes distintos requieren distancias adicionales manuales', async ({ page }) => {
+  await page.route('**/api/stations', route => route.fulfill({ json: {
+    stations: [
+      station({ id: 'a', brand: 'GALP', price: 1.621 }),
+      station({ id: 'b', municipality: 'Valencia', province: 'VALENCIA', lat: 39.47, lon: -0.38, price: 1.835 }),
+    ],
+    publishedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), stale: false, skipped: 0, source: 'test',
+  } }));
+  await page.goto('/');
+  await page.getByLabel('Municipio o código postal').fill('Madrid');
+  await page.getByRole('button', { name: 'Buscar ubicación' }).click();
+  await page.getByRole('button', { name: 'Madrid, MADRID', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Misma zona donde repostaré' }).uncheck();
+  await page.getByLabel('¿Dónde quieres comparar?').fill('Valencia');
+  await page.getByRole('button', { name: 'Buscar municipio de comparación' }).click();
+  await page.getByRole('button', { name: 'Valencia, VALENCIA', exact: true }).click();
+  await page.getByRole('list', { name: 'Gasolineras cercanas' }).getByRole('button').click();
+  await chooseSearchOption(page, 'Marca seleccionada', 'REPSOL');
+  await page.getByRole('list', { name: 'Gasolineras de la marca' }).getByRole('button').click();
+  await page.getByText('Coste de desplazamiento', { exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Incluir coste de desplazamiento' }).check();
+  await expect(page.getByText('Los listados tienen orígenes distintos.', { exact: false })).toBeVisible();
+  const nearDistance = page.getByLabel('Distancia adicional hasta la gasolinera A');
+  const brandDistance = page.getByLabel('Distancia adicional hasta la gasolinera B');
+  await expect(nearDistance).toHaveValue('');
+  await expect(brandDistance).toHaveValue('');
+  await expect(page.locator('.conclusion')).toContainText('Completa las distancias adicionales de ida');
+  await expect(page.locator('.winner')).toHaveCount(0);
+  await nearDistance.fill('0');
+  await brandDistance.fill('0');
+  await expect(page.getByRole('article', { name: 'Coste de la gasolinera cercana' }).getByText('Mejor opción')).toBeVisible();
+});
+
 test('filtros independientes y orden del listado de marca', async ({ page }) => {
   const stations = [
     station({ id: 'a', name: 'GALP MADRID', brand: 'GALP', price: 1.6 }),

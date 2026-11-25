@@ -21,10 +21,22 @@ export interface Dataset {
   source: string;
 }
 export type CashbackUnit = 'eur' | 'cent';
+export interface TravelDistancePreference {
+  route: string;
+  value: string;
+}
 export interface Preferences {
   location: Location | null;
   brand: string;
   liters: string;
   cashback: string;
   unit: CashbackUnit;
+  maxCashback: string;
+  maxBonusLiters: string;
+  travelEnabled: boolean;
+  travelConsumption: string;
+  travelFuelPrice: string | null;
+  nearbyTravelDistance: TravelDistancePreference | null;
+  brandTravelDistance: TravelDistancePreference | null;
+  includeReturn: boolean;
 }
