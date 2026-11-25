@@ -52,10 +52,10 @@ export function availableBrands(stations: Station[]): string[] {
 
 // Búsqueda sin terceros: centro aproximado de las estaciones con el mismo municipio/CP.
 // No se afirma que sea el centro geográfico real ni una dirección exacta del usuario.
-export function searchLocations(stations: Station[], query: string): Location[] {
+export function searchLocations(stations: Station[], query: string, municipalitiesOnly = false): Location[] {
   const key = searchKey(query);
   if (key.length < 2) return [];
-  const postal = /^\d/.test(key);
+  const postal = !municipalitiesOnly && /^\d/.test(key);
   const groups = new Map<string, { label: string; points: Station[]; exact: boolean }>();
   for (const s of stations) {
     if (!s.coordinatesAvailable) continue;
