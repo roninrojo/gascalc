@@ -65,7 +65,7 @@ export function Comparator({ nearby, brand, nearbyOrigin, brandOrigin, preferenc
     <ComparisonSettings settings={settings} preferences={preferences} onChange={onChange}/>
     {error && <p className="notice error" role="alert">{error}</p>}
     <div className="comparison-cards">
-      <article className={`comparison-card ${result?.winner === 'nearby' ? 'winner' : ''}`} aria-label="Coste de la gasolinera cercana">
+      <article className={`comparison-card ${result?.winner === 'nearby' ? 'winner' : ''}`} data-option="nearby" aria-label="Coste de la gasolinera cercana">
         <div className="comparison-card-heading"><span className="comparison-option">A · Cercana</span>{result?.winner === 'nearby' && <span className="winner-label"><Icon name="check" size={14}/>Mejor opción</span>}</div>
         <h3>{nearby?.name || 'Tu estación cercana'}</h3><p className="comparison-address">{nearby ? `${nearby.address} · ${nearby.municipality}` : 'Selecciona una gasolinera en el listado A.'}</p>
         <dl>
@@ -78,7 +78,7 @@ export function Comparator({ nearby, brand, nearbyOrigin, brandOrigin, preferenc
         </dl>
         <div className="total"><span>{travelEnabled ? 'Coste total real' : 'Coste total'}</span><strong>{result ? money(result.nearbyReal) : '—'}</strong></div>
       </article>
-      <article className={`comparison-card ${result?.winner === 'brand' ? 'winner' : ''}`} aria-label="Coste de la gasolinera de marca">
+      <article className={`comparison-card ${result?.winner === 'brand' ? 'winner' : ''}`} data-option="brand" aria-label="Coste de la gasolinera de marca">
         <div className="comparison-card-heading"><span className="comparison-option">B · Con cashback</span>{result?.winner === 'brand' && <span className="winner-label"><Icon name="check" size={14}/>Mejor opción</span>}</div>
         <h3>{brand?.name || 'Tu estación de marca'}</h3><p className="comparison-address">{brand ? `${brand.address} · ${brand.municipality}` : 'Selecciona una gasolinera en el listado B.'}</p>
         <dl>

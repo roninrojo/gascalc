@@ -134,7 +134,7 @@ export default function App() {
       />
       <div className="selection-intro"><h2>Dos opciones. Una buena decisión.</h2><p>Elige una estación en cada listado para comparar.</p></div>
       <div className="station-columns">
-        <section className="station-panel" aria-labelledby="nearby-option nearby-title"><div className="section-heading"><span className="option-label" id="nearby-option">A</span><div><h3 id="nearby-title">Cerca de ti</h3><p>Tu alternativa sin cashback.</p></div></div>
+        <section className="station-panel" data-option="nearby" aria-labelledby="nearby-option nearby-title"><div className="section-heading"><span className="option-label" id="nearby-option">A</span><div><h3 id="nearby-title">Cerca de ti</h3><p>Tu alternativa sin cashback.</p></div></div>
           <div className="panel-filters">
             <div className="field">
               <label id="radius-label" htmlFor="radius">Distancia máxima</label>
@@ -157,7 +157,7 @@ export default function App() {
             <StationList stations={nearby} selectedId={nearbyId} onSelect={s => setNearbyId(s.id)} publishedAt={data?.publishedAt || null} loading={loading && !data} label="Gasolineras cercanas" empty={!data ? 'No hay precios disponibles. Reintenta la consulta oficial.' : !preferences.location ? 'Indica tu ubicación para encontrar gasolineras cercanas.' : nearbyMunicipality || nearbyBrand ? 'No hay estaciones en este radio con los filtros elegidos. Cambia la población o la marca, o amplía la distancia.' : 'No hay estaciones con gasóleo A en este radio. Prueba a ampliar la distancia.'}/>
           </div>
         </section>
-        <section className="station-panel" aria-labelledby="brand-option brand-title"><div className="section-heading"><span className="option-label" id="brand-option">B</span><div><h3 id="brand-title">Tu marca, con ventaja</h3><p>La opción con tu promoción.</p></div></div>
+        <section className="station-panel" data-option="brand" aria-labelledby="brand-option brand-title"><div className="section-heading"><span className="option-label" id="brand-option">B</span><div><h3 id="brand-title">Tu marca, con ventaja</h3><p>La opción con tu promoción.</p></div></div>
           <div className="panel-filters">
             <div className="field">
               <label id="brand-select-label" htmlFor="brand-select">Marca seleccionada</label>
